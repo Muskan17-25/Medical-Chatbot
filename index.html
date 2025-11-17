@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <div class="chat-container">
+            <div id="chatbox"></div>
+
+            <div class="input-row">
+                <input id="msg" placeholder="Type your message..." />
+                <button onclick="send()">Send</button>
+            </div>
+        </div>
+
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background: #f5f5f5;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+            }
+
+            .chat-container {
+                width: 380px;
+                height: 550px;
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+
+            #chatbox {
+                flex: 1;
+                padding: 15px;
+                overflow-y: auto;
+            }
+
+            .msg {
+                display: flex;
+                align-items: flex-start;
+                gap: 8px;
+                opacity: 0;
+                animation: fadeIn 0.2s forwards;
+                margin-bottom: 12px;
+            }
+
+            .avatar {
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                background: #ccc;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                font-size: 14px;
+            }
+
+            .me .avatar {
+                background: #007bff;
+                color: white;
+            }
+
+            .bot .avatar {
+                background: #444;
+                color: white;
+            }
+
+            .bubble {
+                padding: 10px 14px;
+                border-radius: 10px;
+                max-width: 80%;
+                line-height: 1.4;
+            }
+
+            .me .bubble {
+                background: #007bff;
+                color: white;
+            }
+
+            .bot .bubble {
+                background: #e5e5e5;
+                color: black;
+            }
+
+            .input-row {
+                display: flex;
+                padding: 10px;
+                background: #fafafa;
+                border-top: 1px solid #ddd;
+            }
+
+            .input-row input {
+                flex: 1;
+                padding: 10px;
+                border: 1px solid #ccc;
+                border-radius: 6px;
+                outline: none;
+            }
+
+            .input-row button {
+                margin-left: 10px;
+                padding: 10px 20px;
+                background: #007bff;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+            }
+
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(4px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+        </style>
+
+        <script>
+            async function send() {
+                const msg = document.getElementById("msg").value;
+                if (!msg.trim()) return;
+
+                addMessage(msg, "me");
+                document.getElementById("msg").value = "";
+
+                showTyping();
+
+                try {
+                    const res = await fetch("http://127.0.0.1:5000/chat", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ message: msg }),
+                    });
+
+                    const data = await res.json();
+                    const reply =
+                        typeof data.reply === "string"
+                            ? data.reply
+                            : data.reply.kwargs?.content ||
+                              "No content returned";
+
+                    hideTyping();
+                    addMessage(reply, "bot");
+                } catch (err) {
+                    hideTyping();
+                    addMessage("Error connecting to server", "bot");
+                }
+            }
+
+            function addMessage(text, type) {
+                const box = document.getElementById("chatbox");
+
+                const row = document.createElement("div");
+                row.className = `msg ${type}`;
+
+                const avatar = document.createElement("div");
+                avatar.className = "avatar";
+                avatar.innerText = type === "me" ? "🧑" : "🤖";
+
+                const bubble = document.createElement("div");
+                bubble.className = "bubble";
+                bubble.innerText = text;
+
+                row.appendChild(avatar);
+                row.appendChild(bubble);
+                box.appendChild(row);
+
+                box.scrollTop = box.scrollHeight;
+            }
+
+            function showTyping() {
+                const box = document.getElementById("chatbox");
+                const row = document.createElement("div");
+                row.id = "typing";
+                row.className = "msg bot";
+
+                row.innerHTML = `
+        <div class="avatar">🤖</div>
+        <div class="bubble">Typing...</div>
+    `;
+
+                box.appendChild(row);
+                box.scrollTop = box.scrollHeight;
+            }
+
+            function hideTyping() {
+                const t = document.getElementById("typing");
+                if (t) t.remove();
+            }
+        </script>
+    </body>
+</html>
